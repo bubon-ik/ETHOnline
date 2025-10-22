@@ -48,7 +48,7 @@ BLOCKSCOUT_TOOLS = [
                 },
                 "address": {
                     "type": "string",
-                    "description": "Wallet or contract address (0x...)"
+                    "description": "Wallet or contract address (0x format)"
                 }
             },
             "required": ["chain_id", "address"]
@@ -395,8 +395,8 @@ I'm your intelligent blockchain analyst powered by Claude 3.5 Sonnet and Blocksc
 
 *💬 Natural Language Examples:*
 • "Check vitalik.eth balance on Ethereum"
-• "Analyze 0x123... on Base"
-• "What tokens does 0xabc... hold?"
+• "Analyze 0x123 on Base"
+• "What tokens does 0xabc hold?"
 • "Show me gas prices"
 • "Is this contract safe?"
 
@@ -411,7 +411,7 @@ Let's explore the blockchain together! 🚀"""
 
     await update.message.reply_text(
         welcome_message,
-        parse_mode="Markdown"
+        parse_mode=None
     )
 
 
@@ -458,16 +458,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 *💬 Natural Language Queries:*
 You can also ask questions in plain English:
 • "Check balance of vitalik.eth"
-• "Analyze this contract: 0x123..."
-• "What tokens does 0xabc... hold?"
+• "Analyze this contract: 0x123"
+• "What tokens does 0xabc hold?"
 • "Show me gas prices"
 • "Is this address safe?"
-• "Recent transactions for 0xdef..."
+• "Recent transactions for 0xdef"
 
 *🌐 Supported Networks:*
-• **Ethereum** (chain_id: 1) - Mainnet
-• **Base** (chain_id: 8453) - Coinbase L2
-• **Polygon** (chain_id: 137) - Polygon PoS
+• *Ethereum* (chain_id: 1) - Mainnet
+• *Base* (chain_id: 8453) - Coinbase L2
+• *Polygon* (chain_id: 137) - Polygon PoS
 
 *🎯 Features:*
 ✅ Real-time blockchain data via Blockscout MCP
@@ -483,7 +483,7 @@ Need more help? Just ask me anything about blockchain analysis!"""
 
     await update.message.reply_text(
         help_message,
-        parse_mode="Markdown"
+        parse_mode=None
     )
 
 
@@ -514,31 +514,29 @@ async def chains_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 • Status: ✅ Active
 
 *📊 Network Comparison:*
-```
 Network    | Block Time | Gas Fees | Speed
 -----------|------------|----------|--------
 Ethereum   | ~12s       | High     | Slow
 Base       | ~2s        | Medium   | Fast
 Polygon    | ~2s        | Low      | Fast
-```
 
 *🎯 Usage Examples:*
 • `/analyze vitalik.eth` (Ethereum)
-• `/analyze 0x123...` (defaults to Ethereum)
+• `/analyze 0x123` (defaults to Ethereum)
 • "Check balance on Base"
 • "Analyze contract on Polygon"
 
 *💡 Pro Tip:*
 Use natural language to specify networks:
 • "Check vitalik.eth on Ethereum"
-• "Analyze 0x123... on Base"
+• "Analyze 0x123 on Base"
 • "Show tokens on Polygon"
 
 All networks provide real-time data via Blockscout MCP! 🚀"""
 
     await update.message.reply_text(
         chains_message,
-        parse_mode="Markdown"
+        parse_mode=None
     )
 
 
