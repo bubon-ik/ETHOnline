@@ -28,40 +28,7 @@ A Telegram bot that provides intelligent blockchain analysis powered by **Claude
 - Telegram Bot Token (from [@BotFather](https://t.me/botfather))
 - Claude API Key (from [Anthropic Console](https://console.anthropic.com))
 
-## 🚀 Quick Start
 
-### 1. Clone the repository
-
-```bash
-git clone <your-repo-url>
-cd blockscout-ai-bot
-```
-
-### 2. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configure environment variables
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your credentials:
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-CLAUDE_API_KEY=your_claude_api_key_here
-```
-
-### 4. Run the bot
-
-```bash
-python bot.py
-```
-
-## 💬 Usage Examples
 
 ### Commands
 
@@ -77,27 +44,7 @@ Just send a message to the bot:
 - "What tokens does 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 hold?"
 - "Show me NFTs owned by 0x123..."
 
-## 🚢 Deployment to Railway
 
-### 1. Create a new project on Railway
-
-1. Go to [railway.app](https://railway.app)
-2. Click "New Project"
-3. Select "Deploy from GitHub repo"
-4. Choose this repository
-
-### 2. Configure environment variables
-
-In Railway dashboard:
-- Add `TELEGRAM_BOT_TOKEN`
-- Add `CLAUDE_API_KEY`
-
-### 3. Deploy
-
-Railway will automatically:
-- Detect Python
-- Install dependencies from `requirements.txt`
-- Run using the `Procfile` configuration
 
 ## 🏗️ Architecture
 
@@ -179,29 +126,4 @@ blockscout-ai-bot/
 - Check if chain_id is supported
 - Verify address format (0x...)
 
-## 🎯 Roadmap
-
-- [ ] Add more chains (Polygon, Arbitrum, Optimism)
-- [ ] Implement caching for frequent queries
-- [ ] Add gas price tracking
-- [ ] Transaction simulation
-- [ ] Portfolio value tracking
-- [ ] DeFi protocol integration
-- [ ] Whale alerts
-
-## 📜 License
-
-MIT License - see LICENSE file for details
-
-## 🤝 Contributing
-
-Contributions welcome! Please open an issue or PR.
-
-## 📧 Contact
-
-Built for ETHOnline 2025 by [Your Name]
-
----
-
-**Note**: This is a hackathon project. Use at your own risk. Always verify critical information independently.
 

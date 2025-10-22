@@ -388,7 +388,8 @@ I'm your intelligent blockchain analyst powered by Claude 3.5 Sonnet and Blocksc
 ✅ Show current gas prices and network stats
 
 *📊 Quick Commands:*
-• `/analyze <address>` - Deep analysis of any address
+• `/analyze <address> [network]` - Deep analysis of any address
+• `/analyze_base <address>` - Quick Base network analysis
 • `/gas` - Current Ethereum gas prices
 • `/chains` - Supported blockchain networks
 • `/help` - Full command reference
@@ -401,11 +402,11 @@ I'm your intelligent blockchain analyst powered by Claude 3.5 Sonnet and Blocksc
 • "Is this contract safe?"
 
 *🌐 Supported Chains:*
-• Ethereum (chain_id: 1)
-• Base (chain_id: 8453)
-• Polygon (chain_id: 137)
+• Ethereum (chain_id: 1) - Default
+• Base (chain_id: 8453) - Coinbase L2
+• Polygon (chain_id: 137) - Polygon PoS
 
-*🎯 Built for ETHOnline 2025 - Blockscout MCP Prize*
+*🎯 Built for ETHOnline 2025 - Blockscout MCP*
 
 Let's explore the blockchain together! 🚀"""
 
@@ -416,24 +417,78 @@ Let's explore the blockchain together! 🚀"""
 
 
 async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /analyze command"""
+    """Handle /analyze command with optional network specification"""
     if not context.args:
         await update.message.reply_text(
             "❌ Please provide an address to analyze.\n\n"
-            "Usage: `/analyze <address>`\n"
-            "Example: `/analyze vitalik.eth`",
+            "Usage: `/analyze <address> [network]`\n"
+            "Examples:\n"
+            "• `/analyze vitalik.eth` (Ethereum)\n"
+            "• `/analyze vitalik.eth ethereum`\n"
+            "• `/analyze 0x123... base`\n"
+            "• `/analyze 0x123... polygon`\n\n"
+            "Supported networks: ethereum, base, polygon",
             parse_mode="Markdown"
         )
         return
     
-    address = " ".join(context.args)
+    # Parse arguments
+    args = context.args
+    address = args[0]
+    network = args[1].lower() if len(args) > 1 else "ethereum"
+    
+    # Map network names to chain IDs
+    chain_map = {
+        "ethereum": "1",
+        "eth": "1",
+        "base": "8453",
+        "polygon": "137",
+        "matic": "137"
+    }
+    
+    if network not in chain_map:
+        await update.message.reply_text(
+            f"❌ Unsupported network: {network}\n\n"
+            "Supported networks:\n"
+            "• ethereum (or eth)\n"
+            "• base\n"
+            "• polygon (or matic)",
+            parse_mode="Markdown"
+        )
+        return
+    
+    chain_id = chain_map[network]
     
     # Show typing indicator
     await update.message.chat.send_action("typing")
     
     # Process with Claude
-    query = f"Analyze this address: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
-    response = await process_with_claude(query, chain="1")
+    query = f"Analyze this address on {network.title()} network: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
+    response = await process_with_claude(query, chain=chain_id)
+    
+    await update.message.reply_text(response, parse_mode="Markdown")
+
+
+async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /analyze_base command for quick Base network analysis"""
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Please provide an address to analyze on Base network.\n\n"
+            "Usage: `/analyze_base <address>`\n"
+            "Example: `/analyze_base 0x123...`\n\n"
+            "This command automatically uses Base network (chain_id: 8453)",
+            parse_mode="Markdown"
+        )
+        return
+    
+    address = context.args[0]
+    
+    # Show typing indicator
+    await update.message.chat.send_action("typing")
+    
+    # Process with Claude on Base network
+    query = f"Analyze this address on Base network: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
+    response = await process_with_claude(query, chain="8453")
     
     await update.message.reply_text(response, parse_mode="Markdown")
 
@@ -443,9 +498,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     help_message = """📚 *BlockScout AI - Command Reference*
 
 *🔍 Analysis Commands:*
-• `/analyze <address>` - Comprehensive address analysis
-  Example: `/analyze vitalik.eth`
-  Example: `/analyze 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb`
+• `/analyze <address> [network]` - Comprehensive address analysis
+  Example: `/analyze vitalik.eth` (Ethereum)
+  Example: `/analyze vitalik.eth ethereum`
+  Example: `/analyze 0x123... base`
+  Example: `/analyze 0x123... polygon`
+• `/analyze_base <address>` - Quick Base network analysis
+  Example: `/analyze_base 0x123...`
 
 *📊 Network Commands:*
 • `/gas` - Current Ethereum gas prices and network status
@@ -592,6 +651,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("analyze", analyze_command))
+    application.add_handler(CommandHandler("analyze_base", analyze_base_command))
     application.add_handler(CommandHandler("chains", chains_command))
     application.add_handler(CommandHandler("gas", gas_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
