@@ -7,6 +7,7 @@ Intelligent blockchain analysis powered by Claude 3.5 Sonnet and Blockscout MCP
 import os
 import json
 import logging
+import re
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 
@@ -30,9 +31,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def clean_markdown(text: str) -> str:
+    """Clean Markdown text to prevent Telegram parsing errors"""
+    if not text:
+        return text
+    
+    # Replace problematic characters that cause parsing errors
+    text = text.replace('...', '…')  # Replace ellipses
+    text = text.replace('*', '•')   # Replace asterisks with bullets
+    text = text.replace('_', '')    # Remove underscores
+    text = text.replace('`', '')    # Remove backticks
+    text = text.replace('[', '')     # Remove square brackets
+    text = text.replace(']', '')     # Remove square brackets
+    text = text.replace('(', '')     # Remove parentheses
+    text = text.replace(')', '')     # Remove parentheses
+    
+    # Clean up multiple spaces and newlines
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove any remaining problematic characters
+    text = re.sub(r'[^\w\s•…\n\-\.\,\:\!\?\%\$]', '', text)
+    
+    return text.strip()
+
 # Initialize clients
 anthropic_client = Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+# Validate environment variables
+if not TELEGRAM_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
+if not os.getenv("CLAUDE_API_KEY"):
+    raise ValueError("CLAUDE_API_KEY environment variable is required")
 
 # Blockscout MCP Tools Definition - Real MCP Tools
 BLOCKSCOUT_TOOLS = [
@@ -191,6 +221,65 @@ BLOCKSCOUT_TOOLS = [
             },
             "required": ["chain_id", "symbol"]
         }
+    },
+    {
+        "name": "get_token_info",
+        "description": "Get detailed information about a specific token including metadata, market data, holders count, and contract details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Token contract address"
+                }
+            },
+            "required": ["chain_id", "address"]
+        }
+    },
+    {
+        "name": "get_latest_block",
+        "description": "Get the latest indexed block number and timestamp for a blockchain network.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                }
+            },
+            "required": ["chain_id"]
+        }
+    },
+    {
+        "name": "get_block_info",
+        "description": "Get detailed information about a specific block including timestamp, gas used, transaction count, and block details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "number_or_hash": {
+                    "type": "string",
+                    "description": "Block number or block hash"
+                }
+            },
+            "required": ["chain_id", "number_or_hash"]
+        }
+    },
+    {
+        "name": "get_chains_list",
+        "description": "Get the complete list of all supported blockchain networks with their IDs and names.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     }
 ]
 
@@ -216,20 +305,29 @@ MCP Tools available:
 - get_address_info: Get comprehensive address information
 - get_address_by_ens_name: Resolve ENS domains
 - get_tokens_by_address: Get ERC20 token holdings
+- get_token_info: Get detailed token information
 - get_transactions_by_address: Get transaction history
+- get_token_transfers_by_address: Get token transfer history
 - nft_tokens_by_address: Get NFT portfolio
 - get_contract_abi: Get smart contract ABI
-- get_token_transfers_by_address: Get token transfer history
 - lookup_token_by_symbol: Search tokens by symbol
+- get_latest_block: Get latest block info
+- get_block_info: Get specific block details
+- get_chains_list: Get all supported blockchain networks
 
 When analyzing:
 1. ALWAYS use MCP tools to get REAL data first
 2. Use multiple tools if needed to get complete picture
-3. Interpret data, don't just display raw numbers
-4. Flag suspicious patterns or risks
-5. Compare against typical behavior when relevant
-6. Provide clear, concise explanations
-7. NEVER use placeholder data - always call MCP tools
+3. For token analysis: use get_token_info for detailed token data
+4. For contract analysis: use get_contract_abi to check if contract is verified
+5. For token search: use lookup_token_by_symbol to find tokens by name
+6. For transfer history: use get_token_transfers_by_address for detailed transfers
+7. For NFT analysis: use nft_tokens_by_address for NFT portfolio
+8. Interpret data, don't just display raw numbers
+9. Flag suspicious patterns or risks
+10. Compare against typical behavior when relevant
+11. Provide clear, concise explanations
+12. NEVER use placeholder data - always call MCP tools
 
 Always be helpful, accurate, and security-conscious. Use REAL blockchain data only."""
 
@@ -421,14 +519,14 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not context.args:
         await update.message.reply_text(
             "❌ Please provide an address to analyze.\n\n"
-            "Usage: `/analyze <address> [network]`\n"
+            "Usage: /analyze <address> [network]\n"
             "Examples:\n"
-            "• `/analyze vitalik.eth` (Ethereum)\n"
-            "• `/analyze vitalik.eth ethereum`\n"
-            "• `/analyze 0x123... base`\n"
-            "• `/analyze 0x123... polygon`\n\n"
+            "• /analyze vitalik.eth (Ethereum)\n"
+            "• /analyze vitalik.eth ethereum\n"
+            "• /analyze 0x123 base\n"
+            "• /analyze 0x123 polygon\n\n"
             "Supported networks: ethereum, base, polygon",
-            parse_mode="Markdown"
+            parse_mode=None
         )
         return
     
@@ -443,30 +541,64 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         "eth": "1",
         "base": "8453",
         "polygon": "137",
-        "matic": "137"
+        "matic": "137",
+        "arbitrum": "42161",
+        "arbitrum one": "42161",
+        "optimism": "10",
+        "bsc": "56",
+        "binance": "56",
+        "avalanche": "43114",
+        "avax": "43114",
+        "fantom": "250",
+        "gnosis": "100",
+        "linea": "59144"
     }
     
     if network not in chain_map:
-        await update.message.reply_text(
-            f"❌ Unsupported network: {network}\n\n"
-            "Supported networks:\n"
-            "• ethereum (or eth)\n"
-            "• base\n"
-            "• polygon (or matic)",
-            parse_mode="Markdown"
-        )
-        return
-    
-    chain_id = chain_map[network]
+        # Check if it's a numeric chain ID
+        if network.isdigit():
+            chain_id = network
+        else:
+            await update.message.reply_text(
+                f"❌ Unsupported network: {network}\n\n"
+                "Supported networks:\n"
+                "• ethereum (or eth)\n"
+                "• base\n"
+                "• polygon (or matic)\n"
+                "• arbitrum\n"
+                "• optimism\n"
+                "• bsc (or binance)\n"
+                "• avalanche (or avax)\n"
+                "• fantom\n"
+                "• gnosis\n"
+                "• linea\n\n"
+                "Or use chain ID directly (e.g., 42161 for Arbitrum)",
+                parse_mode=None
+            )
+            return
+    else:
+        chain_id = chain_map[network]
     
     # Show typing indicator
     await update.message.chat.send_action("typing")
     
     # Process with Claude
     query = f"Analyze this address on {network.title()} network: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
-    response = await process_with_claude(query, chain=chain_id)
     
-    await update.message.reply_text(response, parse_mode="Markdown")
+    try:
+        response = await process_with_claude(query, chain=chain_id)
+        
+        # Clean and validate Markdown
+        cleaned_response = clean_markdown(response)
+        
+        await update.message.reply_text(cleaned_response, parse_mode=None)
+        
+    except Exception as e:
+        logger.error(f"Error in analyze_command: {e}")
+        await update.message.reply_text(
+            "❌ Sorry, something went wrong. Please try again later.",
+            parse_mode=None
+        )
 
 
 async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -474,10 +606,10 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
     if not context.args:
         await update.message.reply_text(
             "❌ Please provide an address to analyze on Base network.\n\n"
-            "Usage: `/analyze_base <address>`\n"
-            "Example: `/analyze_base 0x123...`\n\n"
+            "Usage: /analyze_base <address>\n"
+            "Example: /analyze_base 0x123\n\n"
             "This command automatically uses Base network (chain_id: 8453)",
-            parse_mode="Markdown"
+            parse_mode=None
         )
         return
     
@@ -488,9 +620,21 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
     
     # Process with Claude on Base network
     query = f"Analyze this address on Base network: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
-    response = await process_with_claude(query, chain="8453")
     
-    await update.message.reply_text(response, parse_mode="Markdown")
+    try:
+        response = await process_with_claude(query, chain="8453")
+        
+        # Clean and validate Markdown
+        cleaned_response = clean_markdown(response)
+        
+        await update.message.reply_text(cleaned_response, parse_mode=None)
+        
+    except Exception as e:
+        logger.error(f"Error in analyze_base_command: {e}")
+        await update.message.reply_text(
+            "❌ Sorry, something went wrong. Please try again later.",
+            parse_mode=None
+        )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -547,56 +691,88 @@ Need more help? Just ask me anything about blockchain analysis!"""
 
 
 async def chains_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /chains command"""
-    chains_message = """🌐 *Supported Blockchain Networks*
+    """Handle /chains command - show supported blockchain networks"""
+    # Show typing indicator
+    await update.message.chat.send_action("typing")
+    
+    try:
+        # Get chains list from Blockscout MCP
+        chains_result = await call_blockscout_mcp("get_chains_list", {})
+        
+        if chains_result and "content" in chains_result:
+            chains_data = json.loads(chains_result["content"][0]["text"])
+            chains = chains_data.get("data", [])
+            
+            # Popular chains (top 10)
+            popular_chains = [
+                {"name": "Ethereum", "id": "1", "description": "Mainnet"},
+                {"name": "Base", "id": "8453", "description": "Coinbase L2"},
+                {"name": "Arbitrum One", "id": "42161", "description": "Arbitrum L2"},
+                {"name": "Optimism", "id": "10", "description": "Optimism L2"},
+                {"name": "Polygon", "id": "137", "description": "Polygon PoS"},
+                {"name": "BSC", "id": "56", "description": "Binance Smart Chain"},
+                {"name": "Avalanche", "id": "43114", "description": "Avalanche C-Chain"},
+                {"name": "Fantom", "id": "250", "description": "Fantom Opera"},
+                {"name": "Gnosis", "id": "100", "description": "Gnosis Chain"},
+                {"name": "Linea", "id": "59144", "description": "Linea Mainnet"}
+            ]
+            
+            # Build response
+            response = "🌐 *Supported Blockchain Networks*\n\n"
+            response += "*🔥 Top 10 Popular Chains:*\n"
+            
+            for chain in popular_chains:
+                response += f"• *{chain['name']}* (ID: {chain['id']}) - {chain['description']}\n"
+            
+            response += f"\n📊 *Total Supported: {len(chains)}+ chains*\n\n"
+            response += "*💡 How to use:*\n"
+            response += "• `/analyze <address> <network>` - Use network name\n"
+            response += "• `/analyze <address> <chain_id>` - Use chain ID\n\n"
+            response += "*Examples:*\n"
+            response += "• `/analyze vitalik.eth arbitrum`\n"
+            response += "• `/analyze 0x123... optimism`\n"
+            response += "• `/analyze 0x123... 42161` (Arbitrum ID)\n\n"
+            response += "*🎯 All major L1s and L2s supported!*"
+            
+            await update.message.reply_text(response, parse_mode=None)
+            
+        else:
+            # Fallback if MCP fails
+            fallback_response = """🌐 *Supported Blockchain Networks*
 
-*🔗 Ethereum Mainnet*
-• Chain ID: `1`
-• Native Currency: ETH
-• Block Time: ~12 seconds
-• Gas: ETH-based
-• Status: ✅ Active
+*🔥 Top Popular Chains:*
+• *Ethereum* (ID: 1) - Mainnet
+• *Base* (ID: 8453) - Coinbase L2  
+• *Arbitrum One* (ID: 42161) - Arbitrum L2
+• *Optimism* (ID: 10) - Optimism L2
+• *Polygon* (ID: 137) - Polygon PoS
+• *BSC* (ID: 56) - Binance Smart Chain
+• *Avalanche* (ID: 43114) - Avalanche C-Chain
+• *Fantom* (ID: 250) - Fantom Opera
+• *Gnosis* (ID: 100) - Gnosis Chain
+• *Linea* (ID: 59144) - Linea Mainnet
 
-*🔗 Base*
-• Chain ID: `8453`
-• Native Currency: ETH
-• Block Time: ~2 seconds
-• Gas: ETH-based (lower fees)
-• Status: ✅ Active
-• Powered by: Coinbase
+📊 *Total Supported: 1000+ chains*
 
-*🔗 Polygon PoS*
-• Chain ID: `137`
-• Native Currency: MATIC
-• Block Time: ~2 seconds
-• Gas: MATIC-based (very low fees)
-• Status: ✅ Active
+*💡 How to use:*
+• `/analyze <address> <network>` - Use network name
+• `/analyze <address> <chain_id>` - Use chain ID
 
-*📊 Network Comparison:*
-Network    | Block Time | Gas Fees | Speed
------------|------------|----------|--------
-Ethereum   | ~12s       | High     | Slow
-Base       | ~2s        | Medium   | Fast
-Polygon    | ~2s        | Low      | Fast
+*Examples:*
+• `/analyze vitalik.eth arbitrum`
+• `/analyze 0x123... optimism`
+• `/analyze 0x123... 42161` (Arbitrum ID)
 
-*🎯 Usage Examples:*
-• `/analyze vitalik.eth` (Ethereum)
-• `/analyze 0x123` (defaults to Ethereum)
-• "Check balance on Base"
-• "Analyze contract on Polygon"
-
-*💡 Pro Tip:*
-Use natural language to specify networks:
-• "Check vitalik.eth on Ethereum"
-• "Analyze 0x123 on Base"
-• "Show tokens on Polygon"
-
-All networks provide real-time data via Blockscout MCP! 🚀"""
-
-    await update.message.reply_text(
-        chains_message,
-        parse_mode=None
-    )
+*🎯 All major L1s and L2s supported!*"""
+            
+            await update.message.reply_text(fallback_response, parse_mode=None)
+            
+    except Exception as e:
+        logger.error(f"Error in chains_command: {e}")
+        await update.message.reply_text(
+            "❌ Error fetching chains list. Please try again later.",
+            parse_mode=None
+        )
 
 
 async def gas_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -606,9 +782,21 @@ async def gas_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
     # Get gas prices using MCP tools
     query = "Get current Ethereum gas prices and network status. Provide detailed analysis including slow, standard, fast, and instant gas prices, network utilization, and recommendations for optimal transaction timing."
-    response = await process_with_claude(query, chain="1")
     
-    await update.message.reply_text(response, parse_mode="Markdown")
+    try:
+        response = await process_with_claude(query, chain="1")
+        
+        # Clean and validate Markdown
+        cleaned_response = clean_markdown(response)
+        
+        await update.message.reply_text(cleaned_response, parse_mode=None)
+        
+    except Exception as e:
+        logger.error(f"Error in gas_command: {e}")
+        await update.message.reply_text(
+            "❌ Sorry, something went wrong. Please try again later.",
+            parse_mode=None
+        )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -619,9 +807,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.chat.send_action("typing")
     
     # Process with Claude
-    response = await process_with_claude(user_message)
-    
-    await update.message.reply_text(response, parse_mode="Markdown")
+    try:
+        response = await process_with_claude(user_message)
+        
+        # Clean and validate Markdown
+        cleaned_response = clean_markdown(response)
+        
+        await update.message.reply_text(cleaned_response, parse_mode=None)
+        
+    except Exception as e:
+        logger.error(f"Error in handle_message: {e}")
+        await update.message.reply_text(
+            "❌ Sorry, something went wrong. Please try again later.",
+            parse_mode=None
+        )
 
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
