@@ -280,6 +280,112 @@ BLOCKSCOUT_TOOLS = [
             "properties": {},
             "required": []
         }
+    },
+    {
+        "name": "get_transaction_info",
+        "description": "Get comprehensive transaction information including decoded parameters, token transfers, and fee breakdown.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "transaction_hash": {
+                    "type": "string",
+                    "description": "Transaction hash to analyze"
+                }
+            },
+            "required": ["chain_id", "transaction_hash"]
+        }
+    },
+    {
+        "name": "get_transaction_logs",
+        "description": "Get comprehensive transaction logs with decoded event parameters for smart contract analysis.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "transaction_hash": {
+                    "type": "string",
+                    "description": "Transaction hash to get logs for"
+                }
+            },
+            "required": ["chain_id", "transaction_hash"]
+        }
+    },
+    {
+        "name": "transaction_summary",
+        "description": "Get human-readable transaction summaries with automatic classification (transfers, swaps, NFT sales, DeFi operations).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "transaction_hash": {
+                    "type": "string",
+                    "description": "Transaction hash to summarize"
+                }
+            },
+            "required": ["chain_id", "transaction_hash"]
+        }
+    },
+    {
+        "name": "inspect_contract_code",
+        "description": "Inspect verified smart contract source code and metadata for security analysis.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Smart contract address to inspect"
+                },
+                "file_name": {
+                    "type": "string",
+                    "description": "Optional: Specific source file to inspect"
+                }
+            },
+            "required": ["chain_id", "address"]
+        }
+    },
+    {
+        "name": "read_contract",
+        "description": "Call smart contract functions (view/pure) to read contract state and analyze behavior.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "chain_id": {
+                    "type": "string",
+                    "description": "Blockchain ID: '1' for Ethereum, '8453' for Base, '137' for Polygon"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Smart contract address"
+                },
+                "abi": {
+                    "type": "object",
+                    "description": "Function ABI for the specific function to call"
+                },
+                "function_name": {
+                    "type": "string",
+                    "description": "Name of the function to call"
+                },
+                "args": {
+                    "type": "string",
+                    "description": "JSON string of function arguments"
+                }
+            },
+            "required": ["chain_id", "address", "abi", "function_name"]
+        }
     }
 ]
 
@@ -314,20 +420,89 @@ MCP Tools available:
 - get_latest_block: Get latest block info
 - get_block_info: Get specific block details
 - get_chains_list: Get all supported blockchain networks
+- get_transaction_info: Get comprehensive transaction details
+- get_transaction_logs: Get transaction logs with decoded events
+- transaction_summary: Get human-readable transaction summaries
+- inspect_contract_code: Inspect verified contract source code
+- read_contract: Call smart contract functions to read state
 
-When analyzing:
-1. ALWAYS use MCP tools to get REAL data first
-2. Use multiple tools if needed to get complete picture
-3. For token analysis: use get_token_info for detailed token data
-4. For contract analysis: use get_contract_abi to check if contract is verified
-5. For token search: use lookup_token_by_symbol to find tokens by name
-6. For transfer history: use get_token_transfers_by_address for detailed transfers
-7. For NFT analysis: use nft_tokens_by_address for NFT portfolio
-8. Interpret data, don't just display raw numbers
-9. Flag suspicious patterns or risks
-10. Compare against typical behavior when relevant
-11. Provide clear, concise explanations
-12. NEVER use placeholder data - always call MCP tools
+ANALYSIS FRAMEWORK:
+
+1. DATA COLLECTION:
+   - ALWAYS use MCP tools to get REAL data first
+   - Use multiple tools if needed to get complete picture
+   - For token analysis: use get_token_info for detailed token data
+   - For contract analysis: use get_contract_abi to check if contract is verified
+   - For token search: use lookup_token_by_symbol to find tokens by name
+   - For transfer history: use get_token_transfers_by_address for detailed transfers
+   - For NFT analysis: use nft_tokens_by_address for NFT portfolio
+
+2. SECURITY ANALYSIS - RED FLAGS:
+   - Check for suspicious contract patterns (unverified contracts, proxy contracts)
+   - Analyze transaction patterns for potential wash trading
+   - Look for sudden large token movements or dumps
+   - Check for known scam addresses or malicious contracts
+   - Analyze token distribution (concentration in few wallets)
+   - Flag contracts with suspicious function names or behaviors
+   - Check for honeypot patterns or restricted selling
+   - Analyze liquidity patterns and potential rug pull indicators
+
+3. WHALE DETECTION:
+   - Identify addresses with >$1M USD equivalent holdings
+   - Analyze whale movement patterns and timing
+   - Check for coordinated whale activity
+   - Monitor large token transfers and their impact
+   - Analyze whale accumulation vs distribution patterns
+   - Flag potential market manipulation by large holders
+
+4. DEFI PROTOCOL ANALYSIS:
+   - Analyze DeFi protocol interactions and positions
+   - Check for yield farming activities and strategies
+   - Identify lending/borrowing positions and health
+   - Analyze liquidity provision and impermanent loss risks
+   - Check for protocol-specific risks and vulnerabilities
+   - Monitor governance token holdings and voting power
+   - Analyze cross-protocol arbitrage opportunities
+
+5. GAS OPTIMIZATION:
+   - Provide current gas price analysis and recommendations
+   - Suggest optimal transaction timing based on network congestion
+   - Analyze gas usage patterns and optimization opportunities
+   - Compare gas costs across different chains
+   - Recommend batch transactions when applicable
+   - Suggest L2 alternatives for cost savings
+
+6. MULTI-CHAIN COMPARISON:
+   - Compare address activity across different chains
+   - Analyze cross-chain bridge usage and patterns
+   - Identify arbitrage opportunities between chains
+   - Compare token holdings and valuations across chains
+   - Analyze chain-specific DeFi strategies
+   - Monitor cross-chain token movements
+
+7. RISK ASSESSMENT:
+   - Provide risk scores (Low/Medium/High) with explanations
+   - Identify potential vulnerabilities and attack vectors
+   - Analyze smart contract risks and verification status
+   - Check for known security issues or audits
+   - Assess market risks and volatility factors
+   - Provide recommendations for risk mitigation
+
+8. INSIGHTS & RECOMMENDATIONS:
+   - Interpret data, don't just display raw numbers
+   - Flag suspicious patterns or risks immediately
+   - Compare against typical behavior when relevant
+   - Provide clear, concise explanations
+   - Give actionable recommendations
+   - Suggest follow-up analysis when needed
+   - NEVER use placeholder data - always call MCP tools
+
+9. RESPONSE FORMAT:
+   - Start with key findings summary
+   - Provide detailed analysis with data backing
+   - Include risk assessment and security flags
+   - Give specific recommendations
+   - End with actionable next steps
 
 Always be helpful, accurate, and security-conscious. Use REAL blockchain data only."""
 
