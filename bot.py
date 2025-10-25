@@ -845,10 +845,29 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         response = await process_with_claude(query, chain=chain_id)
         
-        # Clean and validate Markdown
-        cleaned_response = clean_markdown(response)
+        # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
         
-        await update.message.reply_text(cleaned_response, parse_mode=None)
+        # Убери markdown
+        result_text = response.replace('**', '')
+        result_text = result_text.replace('••', '')
+        
+        # Добавь переносы перед секциями
+        result_text = result_text.replace('Address:', '\n\n📍 Address:')
+        result_text = result_text.replace('Token:', '\n\n🪙 Token:')
+        result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
+        result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
+        result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+        result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
+        result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
+        
+        # Каждый bullet на новой строке
+        result_text = result_text.replace('•', '\n•')
+        
+        # Убери лишние переносы
+        while '\n\n\n' in result_text:
+            result_text = result_text.replace('\n\n\n', '\n\n')
+        
+        await update.message.reply_text(result_text.strip(), parse_mode=None)
         
     except Exception as e:
         logger.error(f"Error in analyze_command: {e}")
@@ -881,10 +900,29 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         response = await process_with_claude(query, chain="8453")
         
-        # Clean and validate Markdown
-        cleaned_response = clean_markdown(response)
+        # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
         
-        await update.message.reply_text(cleaned_response, parse_mode=None)
+        # Убери markdown
+        result_text = response.replace('**', '')
+        result_text = result_text.replace('••', '')
+        
+        # Добавь переносы перед секциями
+        result_text = result_text.replace('Address:', '\n\n📍 Address:')
+        result_text = result_text.replace('Token:', '\n\n🪙 Token:')
+        result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
+        result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
+        result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+        result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
+        result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
+        
+        # Каждый bullet на новой строке
+        result_text = result_text.replace('•', '\n•')
+        
+        # Убери лишние переносы
+        while '\n\n\n' in result_text:
+            result_text = result_text.replace('\n\n\n', '\n\n')
+        
+        await update.message.reply_text(result_text.strip(), parse_mode=None)
         
     except Exception as e:
         logger.error(f"Error in analyze_base_command: {e}")
@@ -996,10 +1034,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         response = await process_with_claude(user_message)
         
-        # Clean and validate Markdown
-        cleaned_response = clean_markdown(response)
+        # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
         
-        await update.message.reply_text(cleaned_response, parse_mode=None)
+        # Убери markdown
+        result_text = response.replace('**', '')
+        result_text = result_text.replace('••', '')
+        
+        # Добавь переносы перед секциями
+        result_text = result_text.replace('Address:', '\n\n📍 Address:')
+        result_text = result_text.replace('Token:', '\n\n🪙 Token:')
+        result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
+        result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
+        result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+        result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
+        result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
+        
+        # Каждый bullet на новой строке
+        result_text = result_text.replace('•', '\n•')
+        
+        # Убери лишние переносы
+        while '\n\n\n' in result_text:
+            result_text = result_text.replace('\n\n\n', '\n\n')
+        
+        await update.message.reply_text(result_text.strip(), parse_mode=None)
         
     except Exception as e:
         logger.error(f"Error in handle_message: {e}")
