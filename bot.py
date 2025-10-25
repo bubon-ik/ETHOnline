@@ -393,7 +393,6 @@ BLOCKSCOUT_TOOLS = [
 SYSTEM_PROMPT = """You are BlockScout AI blockchain analyst.
 
 🎯 CRITICAL: Keep responses SHORT!
-- /gas queries: 50 words max
 - /analyze queries: 150 words max
 - Other queries: 100 words max
 
@@ -410,6 +409,8 @@ RULES:
 ✅ NO long paragraphs
 ✅ Focus on KEY insights only
 ✅ Highlight risks immediately
+✅ For TOKEN CONTRACTS: analyze ONLY the token itself, NOT all tokens held by that address
+✅ Use get_token_info for token contracts, NOT get_tokens_by_address
 
 Available chains:
 - Ethereum (chain_id: "1")
@@ -419,8 +420,8 @@ Available chains:
 MCP Tools available:
 - get_address_info: Get comprehensive address information
 - get_address_by_ens_name: Resolve ENS domains
-- get_tokens_by_address: Get ERC20 token holdings
-- get_token_info: Get detailed token information
+- get_tokens_by_address: Get ERC20 token holdings (for WALLETS, not token contracts)
+- get_token_info: Get detailed token information (for TOKEN CONTRACTS)
 - get_transactions_by_address: Get transaction history
 - get_token_transfers_by_address: Get token transfer history
 - nft_tokens_by_address: Get NFT portfolio
@@ -440,7 +441,8 @@ ANALYSIS FRAMEWORK:
 1. DATA COLLECTION:
    - ALWAYS use MCP tools to get REAL data first
    - Use multiple tools if needed to get complete picture
-   - For token analysis: use get_token_info for detailed token data
+   - For TOKEN CONTRACTS: use get_token_info (NOT get_tokens_by_address)
+   - For WALLET ANALYSIS: use get_tokens_by_address for portfolio
    - For contract analysis: use get_contract_abi to check if contract is verified
    - For token search: use lookup_token_by_symbol to find tokens by name
    - For transfer history: use get_token_transfers_by_address for detailed transfers
@@ -473,13 +475,6 @@ ANALYSIS FRAMEWORK:
    - Monitor governance token holdings and voting power
    - Analyze cross-protocol arbitrage opportunities
 
-5. GAS OPTIMIZATION:
-   - Provide current gas price analysis and recommendations
-   - Suggest optimal transaction timing based on network congestion
-   - Analyze gas usage patterns and optimization opportunities
-   - Compare gas costs across different chains
-   - Recommend batch transactions when applicable
-   - Suggest L2 alternatives for cost savings
 
 6. MULTI-CHAIN COMPARISON:
    - Compare address activity across different chains
@@ -961,10 +956,6 @@ async def chains_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(response, parse_mode=None)
 
 
-# ❌ REMOVED: gas_command - not using MCP tools properly
-# Gas prices require direct API calls to /api/v2/stats
-# Better to focus on working MCP tools only!
-
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle text messages"""
@@ -1019,7 +1010,6 @@ def main() -> None:
     application.add_handler(CommandHandler("analyze", analyze_command))
     application.add_handler(CommandHandler("analyze_base", analyze_base_command))
     application.add_handler(CommandHandler("chains", chains_command))
-    # ❌ REMOVED: gas_command handler - not using MCP tools properly
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Add error handler
