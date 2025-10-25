@@ -74,6 +74,20 @@ python bot.py
 - Send `/start` to begin
 - Try commands like `/analyze vitalik.eth`
 
+## 🚀 Deployment
+
+### Railway (Recommended - FREE)
+
+1. Go to [railway.app](https://railway.app)
+2. Sign up with GitHub
+3. Click "New Project" → "Deploy from GitHub repo"
+4. Select your ETHOnline repository
+5. Add environment variables:
+   - `TELEGRAM_API_TOKEN` = your telegram bot token
+   - `CLAUDE_API_KEY` = your claude api key
+6. Click "Deploy"
+
+Your bot will be live in minutes! 🎉
 
 
 ## 💬 Usage
