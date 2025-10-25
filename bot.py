@@ -31,6 +31,75 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def format_token_stats(token_data: dict) -> str:
+    """Красивая статистика токена в стиле Blockscout"""
+    
+    symbol = token_data.get('symbol', 'N/A')
+    price = token_data.get('exchange_rate')
+    market_cap = token_data.get('circulating_market_cap')
+    holders = token_data.get('holder_count', 0)
+    total_supply = token_data.get('total_supply')
+    
+    stats = "━━━━━━━━━━━━━━━━━━━━\n"
+    stats += "📊 Stats\n"
+    
+    # Symbol/Name
+    name = token_data.get('name', symbol)
+    stats += f"🪙 {symbol}\n\n"
+    
+    # Price
+    if price:
+        try:
+            price_float = float(price)
+            stats += f"💰 Price: ${price_float:.6f}\n"
+        except:
+            pass
+    
+    # Market Cap
+    if market_cap:
+        try:
+            mc = float(market_cap)
+            if mc >= 1_000_000_000:
+                mc_str = f"${mc/1_000_000_000:.1f}B"
+            elif mc >= 1_000_000:
+                mc_str = f"${mc/1_000_000:.1f}M"
+            elif mc >= 1_000:
+                mc_str = f"${mc/1_000:.1f}K"
+            else:
+                mc_str = f"${mc:.2f}"
+            stats += f"📈 MC: {mc_str}\n"
+        except:
+            pass
+    
+    # Holders
+    if holders:
+        if holders >= 1_000_000:
+            holders_str = f"{holders/1_000_000:.1f}M"
+        elif holders >= 1_000:
+            holders_str = f"{holders/1_000:.1f}K"
+        else:
+            holders_str = f"{holders:,}"
+        stats += f"👥 Holders: {holders_str}\n"
+    
+    # Total Supply
+    if total_supply:
+        try:
+            supply = float(total_supply) / (10**18)  # Wei to tokens
+            if supply >= 1_000_000_000:
+                supply_str = f"{supply/1_000_000_000:.1f}B"
+            elif supply >= 1_000_000:
+                supply_str = f"{supply/1_000_000:.1f}M"
+            elif supply >= 1_000:
+                supply_str = f"{supply/1_000:.1f}K"
+            else:
+                supply_str = f"{supply:.2f}"
+            stats += f"🪙 Supply: {supply_str}\n"
+        except:
+            pass
+    
+    stats += "\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    return stats
+
 def clean_markdown(text: str) -> str:
     """Clean Markdown text to prevent Telegram parsing errors"""
     if not text:
@@ -662,8 +731,12 @@ async def call_blockscout_api(tool_name: str, params: Dict[str, Any]) -> Dict[st
         return {"error": f"Unexpected error: {str(e)}"}
 
 
-async def process_with_claude(user_message: str, chain: str = "1") -> str:
-    """Process user query with Claude tool handling loop"""
+async def process_with_claude(user_message: str, chain: str = "1") -> tuple[str, dict]:
+    """Process user query with Claude tool handling loop
+    
+    Returns:
+        tuple: (claude_analysis_text, token_data_dict)
+    """
     
     try:
         messages = [{
@@ -674,6 +747,7 @@ async def process_with_claude(user_message: str, chain: str = "1") -> str:
         # Tool use loop - proper architecture for MCP Prize!
         max_iterations = 5
         iteration = 0
+        token_data = {}  # Store token data if found
         
         while iteration < max_iterations:
             iteration += 1
@@ -704,6 +778,10 @@ async def process_with_claude(user_message: str, chain: str = "1") -> str:
                         result = await call_blockscout_api(block.name, block.input)
                         logger.info(f"📤 Result: {str(result)[:200]}...")  # First 200 chars
                         
+                        # ✅ Check if this is token data
+                        if isinstance(result, dict) and 'symbol' in result and 'exchange_rate' in result:
+                            token_data = result  # Store token data
+                        
                         # ✅ CRITICAL: Limit result size to prevent token overflow!
                         # Blockscout returns HUGE data, we need to truncate it
                         if isinstance(result, dict):
@@ -731,17 +809,17 @@ async def process_with_claude(user_message: str, chain: str = "1") -> str:
                     if hasattr(block, "text"):
                         final_text += block.text
                 
-                return final_text.strip() or "I couldn't generate a response. Please try again."
+                return final_text.strip() or "I couldn't generate a response. Please try again.", token_data
             
             else:
                 logger.warning(f"Unexpected stop_reason: {response.stop_reason}")
                 break
         
-        return "Analysis took too long. Please try a simpler query."
+        return "Analysis took too long. Please try a simpler query.", token_data
         
     except Exception as e:
         logger.error(f"Error processing with Claude: {str(e)}", exc_info=True)
-        return f"Sorry, I encountered an error analyzing your request. Please try again."
+        return f"Sorry, I encountered an error analyzing your request. Please try again.", {}
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -858,31 +936,67 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = f"Analyze this address on {network.title()} network: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
     
     try:
-        response = await process_with_claude(query, chain=chain_id)
+        claude_analysis, token_data = await process_with_claude(query, chain=chain_id)
         
-        # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+        # ========== ПРОВЕРКА НА ТОКЕН ==========
         
-        # Убери markdown
-        result_text = response.replace('**', '')
-        result_text = result_text.replace('••', '')
-        
-        # Добавь переносы перед секциями
-        result_text = result_text.replace('Address:', '\n\n📍 Address:')
-        result_text = result_text.replace('Token:', '\n\n🪙 Token:')
-        result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
-        result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
-        result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
-        result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
-        result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
-        
-        # Каждый bullet на новой строке
-        result_text = result_text.replace('•', '\n•')
-        
-        # Убери лишние переносы
-        while '\n\n\n' in result_text:
-            result_text = result_text.replace('\n\n\n', '\n\n')
-        
-        await update.message.reply_text(result_text.strip(), parse_mode=None)
+        # Проверь что это токен
+        if token_data and 'symbol' in token_data and 'exchange_rate' in token_data:
+            # ЭТО ТОКЕН! Добавь статистику ПЕРЕД Claude анализом
+            stats_block = format_token_stats(token_data)
+            
+            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            
+            # Убери markdown из анализа
+            analysis_text = claude_analysis.replace('**', '')
+            analysis_text = analysis_text.replace('••', '')
+            
+            # Добавь переносы перед секциями
+            analysis_text = analysis_text.replace('Address:', '\n\n📍 Address:')
+            analysis_text = analysis_text.replace('Token:', '\n\n🪙 Token:')
+            analysis_text = analysis_text.replace('Holders:', '\n\n👥 Holders:')
+            analysis_text = analysis_text.replace('24h Volume:', '\n\n📊 Volume:')
+            analysis_text = analysis_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+            analysis_text = analysis_text.replace('Risk:', '\n\n⚠️ Risk:')
+            analysis_text = analysis_text.replace('Key Insights:', '\n\n💡 Insights:')
+            
+            # Каждый bullet на новой строке
+            analysis_text = analysis_text.replace('•', '\n•')
+            
+            # Убери лишние переносы
+            while '\n\n\n' in analysis_text:
+                analysis_text = analysis_text.replace('\n\n\n', '\n\n')
+            
+            # Объедини: STATS + АНАЛИЗ
+            final_message = stats_block + analysis_text
+            
+            # Отправь пользователю
+            await update.message.reply_text(final_message.strip(), parse_mode=None)
+        else:
+            # Обычный wallet/contract - только Claude анализ
+            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            
+            # Убери markdown
+            result_text = claude_analysis.replace('**', '')
+            result_text = result_text.replace('••', '')
+            
+            # Добавь переносы перед секциями
+            result_text = result_text.replace('Address:', '\n\n📍 Address:')
+            result_text = result_text.replace('Token:', '\n\n🪙 Token:')
+            result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
+            result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
+            result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+            result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
+            result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
+            
+            # Каждый bullet на новой строке
+            result_text = result_text.replace('•', '\n•')
+            
+            # Убери лишние переносы
+            while '\n\n\n' in result_text:
+                result_text = result_text.replace('\n\n\n', '\n\n')
+            
+            await update.message.reply_text(result_text.strip(), parse_mode=None)
         
     except Exception as e:
         logger.error(f"Error in analyze_command: {e}")
@@ -913,31 +1027,67 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
     query = f"Analyze this address on Base network: {address}. Provide a comprehensive overview including balance, tokens, recent activity, and any notable patterns or risks."
     
     try:
-        response = await process_with_claude(query, chain="8453")
+        claude_analysis, token_data = await process_with_claude(query, chain="8453")
         
-        # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+        # ========== ПРОВЕРКА НА ТОКЕН ==========
         
-        # Убери markdown
-        result_text = response.replace('**', '')
-        result_text = result_text.replace('••', '')
-        
-        # Добавь переносы перед секциями
-        result_text = result_text.replace('Address:', '\n\n📍 Address:')
-        result_text = result_text.replace('Token:', '\n\n🪙 Token:')
-        result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
-        result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
-        result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
-        result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
-        result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
-        
-        # Каждый bullet на новой строке
-        result_text = result_text.replace('•', '\n•')
-        
-        # Убери лишние переносы
-        while '\n\n\n' in result_text:
-            result_text = result_text.replace('\n\n\n', '\n\n')
-        
-        await update.message.reply_text(result_text.strip(), parse_mode=None)
+        # Проверь что это токен
+        if token_data and 'symbol' in token_data and 'exchange_rate' in token_data:
+            # ЭТО ТОКЕН! Добавь статистику ПЕРЕД Claude анализом
+            stats_block = format_token_stats(token_data)
+            
+            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            
+            # Убери markdown из анализа
+            analysis_text = claude_analysis.replace('**', '')
+            analysis_text = analysis_text.replace('••', '')
+            
+            # Добавь переносы перед секциями
+            analysis_text = analysis_text.replace('Address:', '\n\n📍 Address:')
+            analysis_text = analysis_text.replace('Token:', '\n\n🪙 Token:')
+            analysis_text = analysis_text.replace('Holders:', '\n\n👥 Holders:')
+            analysis_text = analysis_text.replace('24h Volume:', '\n\n📊 Volume:')
+            analysis_text = analysis_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+            analysis_text = analysis_text.replace('Risk:', '\n\n⚠️ Risk:')
+            analysis_text = analysis_text.replace('Key Insights:', '\n\n💡 Insights:')
+            
+            # Каждый bullet на новой строке
+            analysis_text = analysis_text.replace('•', '\n•')
+            
+            # Убери лишние переносы
+            while '\n\n\n' in analysis_text:
+                analysis_text = analysis_text.replace('\n\n\n', '\n\n')
+            
+            # Объедини: STATS + АНАЛИЗ
+            final_message = stats_block + analysis_text
+            
+            # Отправь пользователю
+            await update.message.reply_text(final_message.strip(), parse_mode=None)
+        else:
+            # Обычный wallet/contract - только Claude анализ
+            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            
+            # Убери markdown
+            result_text = claude_analysis.replace('**', '')
+            result_text = result_text.replace('••', '')
+            
+            # Добавь переносы перед секциями
+            result_text = result_text.replace('Address:', '\n\n📍 Address:')
+            result_text = result_text.replace('Token:', '\n\n🪙 Token:')
+            result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
+            result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
+            result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+            result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
+            result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
+            
+            # Каждый bullet на новой строке
+            result_text = result_text.replace('•', '\n•')
+            
+            # Убери лишние переносы
+            while '\n\n\n' in result_text:
+                result_text = result_text.replace('\n\n\n', '\n\n')
+            
+            await update.message.reply_text(result_text.strip(), parse_mode=None)
         
     except Exception as e:
         logger.error(f"Error in analyze_base_command: {e}")
@@ -1047,31 +1197,67 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Process with Claude
     try:
-        response = await process_with_claude(user_message)
+        claude_analysis, token_data = await process_with_claude(user_message)
         
-        # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+        # ========== ПРОВЕРКА НА ТОКЕН ==========
         
-        # Убери markdown
-        result_text = response.replace('**', '')
-        result_text = result_text.replace('••', '')
-        
-        # Добавь переносы перед секциями
-        result_text = result_text.replace('Address:', '\n\n📍 Address:')
-        result_text = result_text.replace('Token:', '\n\n🪙 Token:')
-        result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
-        result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
-        result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
-        result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
-        result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
-        
-        # Каждый bullet на новой строке
-        result_text = result_text.replace('•', '\n•')
-        
-        # Убери лишние переносы
-        while '\n\n\n' in result_text:
-            result_text = result_text.replace('\n\n\n', '\n\n')
-        
-        await update.message.reply_text(result_text.strip(), parse_mode=None)
+        # Проверь что это токен
+        if token_data and 'symbol' in token_data and 'exchange_rate' in token_data:
+            # ЭТО ТОКЕН! Добавь статистику ПЕРЕД Claude анализом
+            stats_block = format_token_stats(token_data)
+            
+            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            
+            # Убери markdown из анализа
+            analysis_text = claude_analysis.replace('**', '')
+            analysis_text = analysis_text.replace('••', '')
+            
+            # Добавь переносы перед секциями
+            analysis_text = analysis_text.replace('Address:', '\n\n📍 Address:')
+            analysis_text = analysis_text.replace('Token:', '\n\n🪙 Token:')
+            analysis_text = analysis_text.replace('Holders:', '\n\n👥 Holders:')
+            analysis_text = analysis_text.replace('24h Volume:', '\n\n📊 Volume:')
+            analysis_text = analysis_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+            analysis_text = analysis_text.replace('Risk:', '\n\n⚠️ Risk:')
+            analysis_text = analysis_text.replace('Key Insights:', '\n\n💡 Insights:')
+            
+            # Каждый bullet на новой строке
+            analysis_text = analysis_text.replace('•', '\n•')
+            
+            # Убери лишние переносы
+            while '\n\n\n' in analysis_text:
+                analysis_text = analysis_text.replace('\n\n\n', '\n\n')
+            
+            # Объедини: STATS + АНАЛИЗ
+            final_message = stats_block + analysis_text
+            
+            # Отправь пользователю
+            await update.message.reply_text(final_message.strip(), parse_mode=None)
+        else:
+            # Обычный wallet/contract - только Claude анализ
+            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            
+            # Убери markdown
+            result_text = claude_analysis.replace('**', '')
+            result_text = result_text.replace('••', '')
+            
+            # Добавь переносы перед секциями
+            result_text = result_text.replace('Address:', '\n\n📍 Address:')
+            result_text = result_text.replace('Token:', '\n\n🪙 Token:')
+            result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
+            result_text = result_text.replace('24h Volume:', '\n\n📊 Volume:')
+            result_text = result_text.replace('Recent Activity:', '\n\n🔍 Activity:')
+            result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
+            result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
+            
+            # Каждый bullet на новой строке
+            result_text = result_text.replace('•', '\n•')
+            
+            # Убери лишние переносы
+            while '\n\n\n' in result_text:
+                result_text = result_text.replace('\n\n\n', '\n\n')
+            
+            await update.message.reply_text(result_text.strip(), parse_mode=None)
         
     except Exception as e:
         logger.error(f"Error in handle_message: {e}")
