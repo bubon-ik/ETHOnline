@@ -97,7 +97,6 @@ python bot.py
 - Попробуйте команды:
   - `/analyze vitalik.eth`
   - `/analyze_base 0x123...`
-  - `/gas`
   - `/chains`
 
 ---

@@ -87,7 +87,6 @@ python bot.py
   - Example: `/analyze 0x123... base`
   - Example: `/analyze 0x123... polygon`
 - `/analyze_base <address>` - Quick Base network analysis
-- `/gas` - Current Ethereum gas prices and network status
 - `/chains` - List all supported blockchain networks
 
 ### Natural Language Queries
@@ -99,7 +98,6 @@ Just send a message to the bot:
 - "What tokens does 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 hold?"
 - "Show me NFTs owned by 0x123..."
 - "Is this contract safe?"
-- "Show me gas prices"
 
 
 
