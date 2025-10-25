@@ -718,12 +718,11 @@ I'm your intelligent blockchain analyst powered by Claude 3.5 Sonnet and Blocksc
 ✅ Review transaction history with AI insights
 ✅ Identify patterns, risks, and opportunities
 ✅ Provide actionable recommendations
-✅ Show current gas prices and network stats
+✅ Multi-chain blockchain analysis
 
 *📊 Quick Commands:*
 • `/analyze <address> [network]` - Deep analysis of any address
 • `/analyze_base <address>` - Quick Base network analysis
-• `/gas` - Current Ethereum gas prices
 • `/chains` - Supported blockchain networks
 • `/help` - Full command reference
 
@@ -731,8 +730,8 @@ I'm your intelligent blockchain analyst powered by Claude 3.5 Sonnet and Blocksc
 • "Check vitalik.eth balance on Ethereum"
 • "Analyze 0x123 on Base"
 • "What tokens does 0xabc hold?"
-• "Show me gas prices"
 • "Is this contract safe?"
+• "Show me recent transactions"
 
 *🌐 Supported Chains:*
 • Ethereum (chain_id: 1) - Default
@@ -886,7 +885,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
   Example: `/analyze_base 0x123...`
 
 *📊 Network Commands:*
-• `/gas` - Current Ethereum gas prices and network status
 • `/chains` - List of supported blockchain networks
 
 *ℹ️ Info Commands:*
@@ -898,7 +896,6 @@ You can also ask questions in plain English:
 • "Check balance of vitalik.eth"
 • "Analyze this contract: 0x123"
 • "What tokens does 0xabc hold?"
-• "Show me gas prices"
 • "Is this address safe?"
 • "Recent transactions for 0xdef"
 
@@ -964,28 +961,9 @@ async def chains_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(response, parse_mode=None)
 
 
-async def gas_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle /gas command"""
-    # Show typing indicator
-    await update.message.chat.send_action("typing")
-    
-    # Get gas prices using MCP tools
-    query = "Get current Ethereum gas prices and network status. Provide detailed analysis including slow, standard, fast, and instant gas prices, network utilization, and recommendations for optimal transaction timing."
-    
-    try:
-        response = await process_with_claude(query, chain="1")
-        
-        # Clean and validate Markdown
-        cleaned_response = clean_markdown(response)
-        
-        await update.message.reply_text(cleaned_response, parse_mode=None)
-        
-    except Exception as e:
-        logger.error(f"Error in gas_command: {e}")
-        await update.message.reply_text(
-            "❌ Sorry, something went wrong. Please try again later.",
-            parse_mode=None
-        )
+# ❌ REMOVED: gas_command - not using MCP tools properly
+# Gas prices require direct API calls to /api/v2/stats
+# Better to focus on working MCP tools only!
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1041,7 +1019,7 @@ def main() -> None:
     application.add_handler(CommandHandler("analyze", analyze_command))
     application.add_handler(CommandHandler("analyze_base", analyze_base_command))
     application.add_handler(CommandHandler("chains", chains_command))
-    application.add_handler(CommandHandler("gas", gas_command))
+    # ❌ REMOVED: gas_command handler - not using MCP tools properly
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Add error handler
