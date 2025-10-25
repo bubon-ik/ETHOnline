@@ -1,6 +1,6 @@
 # BlockScout AI - Intelligent Blockchain Analysis Bot
 
-> 🏆 Built for ETHOnline 2025 - Blockscout MCP Prize ($1,250)
+> 🏆 Built for ETHOnline 2025 - Blockscout MCP
 
 A Telegram bot that provides intelligent blockchain analysis powered by **Claude 3.5 Sonnet** and **Blockscout MCP**.
 
