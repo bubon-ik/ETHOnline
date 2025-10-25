@@ -37,23 +37,20 @@ def format_token_stats(token_data: dict) -> str:
     symbol = token_data.get('symbol', 'N/A')
     price = token_data.get('exchange_rate')
     market_cap = token_data.get('circulating_market_cap')
-    holders = token_data.get('holder_count', 0)
+    holders = token_data.get('holders_count', 0)
     total_supply = token_data.get('total_supply')
     
-    stats = "━━━━━━━━━━━━━━━━━━━━\n"
-    stats += "📊 Stats\n"
+    stats = "📊 Stats\n"
     
-    # Symbol/Name
-    name = token_data.get('name', symbol)
-    stats += f"🪙 {symbol}\n\n"
-    
-    # Price
+    # USD Price
     if price:
         try:
             price_float = float(price)
-            stats += f"💰 Price: ${price_float:.6f}\n"
+            stats += f"USD ${price_float:.6f}\n"
         except:
-            pass
+            stats += "USD $0.000000\n"
+    else:
+        stats += "USD $0.000000\n"
     
     # Market Cap
     if market_cap:
@@ -67,19 +64,27 @@ def format_token_stats(token_data: dict) -> str:
                 mc_str = f"${mc/1_000:.1f}K"
             else:
                 mc_str = f"${mc:.2f}"
-            stats += f"📈 MC: {mc_str}\n"
+            stats += f"MC {mc_str}\n"
         except:
-            pass
+            stats += "MC $0\n"
+    else:
+        stats += "MC $0\n"
     
     # Holders
     if holders:
-        if holders >= 1_000_000:
-            holders_str = f"{holders/1_000_000:.1f}M"
-        elif holders >= 1_000:
-            holders_str = f"{holders/1_000:.1f}K"
-        else:
-            holders_str = f"{holders:,}"
-        stats += f"👥 Holders: {holders_str}\n"
+        try:
+            holders_int = int(holders)
+            if holders_int >= 1_000_000:
+                holders_str = f"{holders_int/1_000_000:.1f}M"
+            elif holders_int >= 1_000:
+                holders_str = f"{holders_int/1_000:.1f}K"
+            else:
+                holders_str = f"{holders_int:,}"
+            stats += f"Holders {holders_str}\n"
+        except:
+            stats += "Holders 0\n"
+    else:
+        stats += "Holders 0\n"
     
     # Total Supply
     if total_supply:
@@ -93,9 +98,11 @@ def format_token_stats(token_data: dict) -> str:
                 supply_str = f"{supply/1_000:.1f}K"
             else:
                 supply_str = f"{supply:.2f}"
-            stats += f"🪙 Supply: {supply_str}\n"
+            stats += f"Supply {supply_str}\n"
         except:
-            pass
+            stats += "Supply 0\n"
+    else:
+        stats += "Supply 0\n"
     
     stats += "\n━━━━━━━━━━━━━━━━━━━━\n\n"
     return stats
@@ -545,6 +552,11 @@ FORMATTING RULES:
 • Use emojis for visual hierarchy
 • Max 3 bullets per section
 
+🚨 CRITICAL FOR TOKENS:
+• For TOKEN contracts: DO NOT repeat price, market cap, holders data
+• Focus on RISK analysis and contract security
+• Keep analysis concise since stats are shown separately
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛠 MCP TOOLS REFERENCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -740,7 +752,7 @@ async def process_with_claude(user_message: str, chain: str = "1") -> tuple[str,
     
     try:
         messages = [{
-            "role": "user",
+                "role": "user",
             "content": f"[Chain: {chain}] {user_message}. Keep response SHORT (50-150 words). Use emojis and bullet points."
         }]
         
@@ -778,9 +790,14 @@ async def process_with_claude(user_message: str, chain: str = "1") -> tuple[str,
                         result = await call_blockscout_api(block.name, block.input)
                         logger.info(f"📤 Result: {str(result)[:200]}...")  # First 200 chars
                         
-                        # ✅ Check if this is token data
-                        if isinstance(result, dict) and 'symbol' in result and 'exchange_rate' in result:
-                            token_data = result  # Store token data
+                        # ✅ Check if this is token data from get_tokens_by_address
+                        if isinstance(result, dict) and 'items' in result and result['items']:
+                            # Check if first item has token data
+                            first_item = result['items'][0]
+                            if isinstance(first_item, dict) and 'token' in first_item:
+                                token_info = first_item['token']
+                                if 'symbol' in token_info and 'exchange_rate' in token_info:
+                                    token_data = token_info  # Store token data
                         
                         # ✅ CRITICAL: Limit result size to prevent token overflow!
                         # Blockscout returns HUGE data, we need to truncate it
@@ -1185,7 +1202,7 @@ async def chains_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     response += "*🎯 All major L1s and L2s supported!*"
     
     await update.message.reply_text(response, parse_mode=None)
-
+            
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
