@@ -508,7 +508,35 @@ ANALYSIS FRAMEWORK:
    - Give specific recommendations
    - End with actionable next steps
 
-Always be helpful, accurate, and security-conscious. Use REAL blockchain data only."""
+Always be helpful, accurate, and security-conscious. Use REAL blockchain data only.
+
+CRITICAL FORMATTING FOR TELEGRAM:
+- Each section on NEW LINE
+- Use double newline between sections
+- Format:
+
+📍 Address: [name]
+
+🪙 Token: [symbol] - $[price]
+
+👥 Holders: [number]
+• Item 1
+• Item 2
+
+📊 24h Volume: [amount]
+
+🔍 Recent Activity:
+• Activity 1
+• Activity 2
+
+⚠️ Risk: [level]
+
+💡 Key Insights:
+• Insight 1
+• Insight 2
+
+ALWAYS use double newlines between sections!
+Each bullet point on separate line!"""
 
 
 # Blockscout API integration
