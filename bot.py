@@ -32,7 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def format_token_stats(token_data: dict) -> str:
-    """Красивая статистика токена в стиле Blockscout"""
+    """Beautiful token statistics in Blockscout style"""
     
     symbol = token_data.get('symbol', 'N/A')
     price = token_data.get('exchange_rate')
@@ -767,7 +767,7 @@ async def process_with_claude(user_message: str, chain: str = "1") -> tuple[str,
             # Call Claude API with tools
             response = anthropic_client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=800,  # Увеличил для tool использования
+                max_tokens=800,  # Increased for tool usage
                 system=SYSTEM_PROMPT,
                 messages=messages,
                 tools=BLOCKSCOUT_TOOLS  # CRITICAL for MCP Prize!
@@ -817,7 +817,7 @@ async def process_with_claude(user_message: str, chain: str = "1") -> tuple[str,
                 
                 # Add tool results
                 messages.append({"role": "user", "content": tool_results_content})
-                continue  # ⬅️ КРИТИЧНО! Продолжить цикл для получения финального ответа
+                continue  # CRITICAL! Continue loop to get final response
                 
             elif response.stop_reason == "end_turn":
                 # Extract final answer
@@ -955,20 +955,20 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         claude_analysis, token_data = await process_with_claude(query, chain=chain_id)
         
-        # ========== ПРОВЕРКА НА ТОКЕН ==========
+        # ========== TOKEN CHECK ==========
         
-        # Проверь что это токен
+        # Check if this is a token
         if token_data and 'symbol' in token_data and 'exchange_rate' in token_data:
-            # ЭТО ТОКЕН! Добавь статистику ПЕРЕД Claude анализом
+            # THIS IS A TOKEN! Add statistics BEFORE Claude analysis
             stats_block = format_token_stats(token_data)
             
-            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            # ========== TELEGRAM FORMATTING ==========
             
-            # Убери markdown из анализа
+            # Remove markdown from analysis
             analysis_text = claude_analysis.replace('**', '')
             analysis_text = analysis_text.replace('••', '')
             
-            # Добавь переносы перед секциями
+            # Add line breaks before sections
             analysis_text = analysis_text.replace('Address:', '\n\n📍 Address:')
             analysis_text = analysis_text.replace('Token:', '\n\n🪙 Token:')
             analysis_text = analysis_text.replace('Holders:', '\n\n👥 Holders:')
@@ -977,27 +977,27 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             analysis_text = analysis_text.replace('Risk:', '\n\n⚠️ Risk:')
             analysis_text = analysis_text.replace('Key Insights:', '\n\n💡 Insights:')
             
-            # Каждый bullet на новой строке
+            # Each bullet on new line
             analysis_text = analysis_text.replace('•', '\n•')
             
-            # Убери лишние переносы
+            # Remove extra line breaks
             while '\n\n\n' in analysis_text:
                 analysis_text = analysis_text.replace('\n\n\n', '\n\n')
             
-            # Объедини: STATS + АНАЛИЗ
+            # Combine: STATS + ANALYSIS
             final_message = stats_block + analysis_text
             
-            # Отправь пользователю
+            # Send to user
             await update.message.reply_text(final_message.strip(), parse_mode=None)
         else:
-            # Обычный wallet/contract - только Claude анализ
-            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            # Regular wallet/contract - only Claude analysis
+            # ========== TELEGRAM FORMATTING ==========
             
-            # Убери markdown
+            # Remove markdown
             result_text = claude_analysis.replace('**', '')
             result_text = result_text.replace('••', '')
             
-            # Добавь переносы перед секциями
+            # Add line breaks before sections
             result_text = result_text.replace('Address:', '\n\n📍 Address:')
             result_text = result_text.replace('Token:', '\n\n🪙 Token:')
             result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
@@ -1006,10 +1006,10 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
             result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
             
-            # Каждый bullet на новой строке
+            # Each bullet on new line
             result_text = result_text.replace('•', '\n•')
             
-            # Убери лишние переносы
+            # Remove extra line breaks
             while '\n\n\n' in result_text:
                 result_text = result_text.replace('\n\n\n', '\n\n')
             
@@ -1046,20 +1046,20 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         claude_analysis, token_data = await process_with_claude(query, chain="8453")
         
-        # ========== ПРОВЕРКА НА ТОКЕН ==========
+        # ========== TOKEN CHECK ==========
         
-        # Проверь что это токен
+        # Check if this is a token
         if token_data and 'symbol' in token_data and 'exchange_rate' in token_data:
-            # ЭТО ТОКЕН! Добавь статистику ПЕРЕД Claude анализом
+            # THIS IS A TOKEN! Add statistics BEFORE Claude analysis
             stats_block = format_token_stats(token_data)
             
-            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            # ========== TELEGRAM FORMATTING ==========
             
-            # Убери markdown из анализа
+            # Remove markdown from analysis
             analysis_text = claude_analysis.replace('**', '')
             analysis_text = analysis_text.replace('••', '')
             
-            # Добавь переносы перед секциями
+            # Add line breaks before sections
             analysis_text = analysis_text.replace('Address:', '\n\n📍 Address:')
             analysis_text = analysis_text.replace('Token:', '\n\n🪙 Token:')
             analysis_text = analysis_text.replace('Holders:', '\n\n👥 Holders:')
@@ -1068,27 +1068,27 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
             analysis_text = analysis_text.replace('Risk:', '\n\n⚠️ Risk:')
             analysis_text = analysis_text.replace('Key Insights:', '\n\n💡 Insights:')
             
-            # Каждый bullet на новой строке
+            # Each bullet on new line
             analysis_text = analysis_text.replace('•', '\n•')
             
-            # Убери лишние переносы
+            # Remove extra line breaks
             while '\n\n\n' in analysis_text:
                 analysis_text = analysis_text.replace('\n\n\n', '\n\n')
             
-            # Объедини: STATS + АНАЛИЗ
+            # Combine: STATS + ANALYSIS
             final_message = stats_block + analysis_text
             
-            # Отправь пользователю
+            # Send to user
             await update.message.reply_text(final_message.strip(), parse_mode=None)
         else:
-            # Обычный wallet/contract - только Claude анализ
-            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            # Regular wallet/contract - only Claude analysis
+            # ========== TELEGRAM FORMATTING ==========
             
-            # Убери markdown
+            # Remove markdown
             result_text = claude_analysis.replace('**', '')
             result_text = result_text.replace('••', '')
             
-            # Добавь переносы перед секциями
+            # Add line breaks before sections
             result_text = result_text.replace('Address:', '\n\n📍 Address:')
             result_text = result_text.replace('Token:', '\n\n🪙 Token:')
             result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
@@ -1097,10 +1097,10 @@ async def analyze_base_command(update: Update, context: ContextTypes.DEFAULT_TYP
             result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
             result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
             
-            # Каждый bullet на новой строке
+            # Each bullet on new line
             result_text = result_text.replace('•', '\n•')
             
-            # Убери лишние переносы
+            # Remove extra line breaks
             while '\n\n\n' in result_text:
                 result_text = result_text.replace('\n\n\n', '\n\n')
             
@@ -1216,20 +1216,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         claude_analysis, token_data = await process_with_claude(user_message)
         
-        # ========== ПРОВЕРКА НА ТОКЕН ==========
         
-        # Проверь что это токен
+        # Check if this is a token
         if token_data and 'symbol' in token_data and 'exchange_rate' in token_data:
-            # ЭТО ТОКЕН! Добавь статистику ПЕРЕД Claude анализом
+            # THIS IS A TOKEN! Add statistics BEFORE Claude analysis
             stats_block = format_token_stats(token_data)
             
-            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            # ========== TELEGRAM FORMATTING ==========
             
-            # Убери markdown из анализа
+            # Remove markdown from analysis
             analysis_text = claude_analysis.replace('**', '')
             analysis_text = analysis_text.replace('••', '')
             
-            # Добавь переносы перед секциями
+            # Add line breaks before sections
             analysis_text = analysis_text.replace('Address:', '\n\n📍 Address:')
             analysis_text = analysis_text.replace('Token:', '\n\n🪙 Token:')
             analysis_text = analysis_text.replace('Holders:', '\n\n👥 Holders:')
@@ -1238,27 +1237,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             analysis_text = analysis_text.replace('Risk:', '\n\n⚠️ Risk:')
             analysis_text = analysis_text.replace('Key Insights:', '\n\n💡 Insights:')
             
-            # Каждый bullet на новой строке
+            # Each bullet on new line
             analysis_text = analysis_text.replace('•', '\n•')
             
-            # Убери лишние переносы
+            # Remove extra line breaks
             while '\n\n\n' in analysis_text:
                 analysis_text = analysis_text.replace('\n\n\n', '\n\n')
             
-            # Объедини: STATS + АНАЛИЗ
+            # Combine: STATS + ANALYSIS
             final_message = stats_block + analysis_text
             
-            # Отправь пользователю
+            # Send to user
             await update.message.reply_text(final_message.strip(), parse_mode=None)
         else:
-            # Обычный wallet/contract - только Claude анализ
-            # ========== ФОРМАТИРОВАНИЕ ДЛЯ TELEGRAM ==========
+            # Regular wallet/contract - only Claude analysis
+            # ========== TELEGRAM FORMATTING ==========
             
-            # Убери markdown
+            # Remove markdown
             result_text = claude_analysis.replace('**', '')
             result_text = result_text.replace('••', '')
             
-            # Добавь переносы перед секциями
+            # Add line breaks before sections
             result_text = result_text.replace('Address:', '\n\n📍 Address:')
             result_text = result_text.replace('Token:', '\n\n🪙 Token:')
             result_text = result_text.replace('Holders:', '\n\n👥 Holders:')
@@ -1267,10 +1266,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             result_text = result_text.replace('Risk:', '\n\n⚠️ Risk:')
             result_text = result_text.replace('Key Insights:', '\n\n💡 Insights:')
             
-            # Каждый bullet на новой строке
+            # Each bullet on new line
             result_text = result_text.replace('•', '\n•')
             
-            # Убери лишние переносы
+            # Remove extra line breaks
             while '\n\n\n' in result_text:
                 result_text = result_text.replace('\n\n\n', '\n\n')
             
