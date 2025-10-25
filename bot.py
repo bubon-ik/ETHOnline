@@ -141,6 +141,7 @@ if not os.getenv("CLAUDE_API_KEY"):
     raise ValueError("CLAUDE_API_KEY environment variable is required")
 
 # Blockscout MCP Tools Definition - Real MCP Tools
+# Based on: https://github.com/blockscout/mcp-server
 BLOCKSCOUT_TOOLS = [
     {
         "name": "get_address_info",

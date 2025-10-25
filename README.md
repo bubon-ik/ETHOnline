@@ -29,7 +29,7 @@ A Telegram bot that provides intelligent blockchain analysis powered by **Claude
 - **Bot Framework**: python-telegram-bot v21.5
 - **AI Model**: Claude 3.5 Sonnet 4 (claude-sonnet-4-20250514)
 - **MCP Integration**: Proper Claude API + MCP tools (not HTTP wrappers!)
-- **Data Source**: Blockscout MCP Server
+- **Data Source**: [Blockscout MCP Server](https://github.com/blockscout/mcp-server)
 - **Deployment**: Railway / Heroku ready
 
 ## 📋 Prerequisites
