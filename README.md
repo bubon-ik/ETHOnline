@@ -121,7 +121,7 @@ Formatted response to user (~150 words, optimized)
 ### Key Components
 
 - **bot.py**: Main bot logic, handlers, Claude integration
-- **BLOCKSCOUT_TOOLS**: 16 MCP tool definitions for Claude
+- **BLOCKSCOUT_TOOLS**: 17 MCP tool definitions for Claude
 - **process_with_claude()**: ✅ Claude API calls MCP tools directly (proper integration!)
 - **max_tokens=800**: Optimized for short responses (~150 words)
 - **SYSTEM_PROMPT**: Instructs Claude to be concise and actionable
@@ -187,7 +187,7 @@ Popular chains:
 
 And 1000+ more chains supported via Blockscout!
 
-### Available MCP Tools (16 total)
+### Available MCP Tools (17 total)
 
 1. `get_address_info` - Comprehensive address information
 2. `get_address_by_ens_name` - ENS domain resolution
@@ -222,49 +222,6 @@ ETHOnline/
 ├── README.md                   # This file
 └── SUBMISSION_READY.md         # Submission checklist
 ```
-
-### Testing
-
-Test the bot by running it locally:
-```bash
-source venv/bin/activate
-python bot.py
-```
-
-Then test in Telegram:
-- Find your bot in Telegram
-- Send `/start` to begin
-- Try commands like `/analyze vitalik.eth`
-- Test natural language queries
-
-### Adding New Features
-
-1. Add new tools to `BLOCKSCOUT_TOOLS` list in `bot.py`
-2. Update `SYSTEM_PROMPT` if needed
-3. Test locally before deploying
-4. Keep responses under 150 words!
-
-## 🐛 Troubleshooting
-
-### Bot not responding
-
-- Check if `TELEGRAM_API_TOKEN` is correct (not `TELEGRAM_BOT_TOKEN`!)
-- Verify bot is running (`python bot.py` shows no errors)
-- Check logs for error messages
-
-### AI analysis fails
-
-- Verify `CLAUDE_API_KEY` is valid
-- Check Anthropic API quota/credits
-- Review logs for API errors
-- Ensure you're using `claude-sonnet-4-20250514` model
-
-### MCP tool errors
-
-- MCP tools are called by Claude API directly (not HTTP wrappers)
-- Check if chain_id is supported (use `/chains` command)
-- Verify address format (0x...)
-- Review Claude API logs for tool call errors
 
 ## 🏆 ETHOnline 2025 Submission
 
@@ -306,6 +263,6 @@ Then test in Telegram:
 
 ---
 
-Built with ❤️ for ETHOnline 2025 - Blockscout MCP Prize 🏆
+Built with ❤️ for ETHOnline 2025 - Blockscout MCP
 
 
